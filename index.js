@@ -19,7 +19,7 @@ class Bifrost {
     this.MENU = 1
     this.ROUTES = 2
 
-    this.cache = new Cache($.cache.app.misty)
+    this.cache = new Cache($.app.name)
 
     this.services = {}
     this.getTreeModules = this.getTreeModules.bind(this)
@@ -35,10 +35,10 @@ class Bifrost {
     // TODO: make this dynamic
     return new Promise((resolve, reject) => {
       db.get({
-        app: 'Misty',
+        app: $.app.name,
         key: 'modules-raw',
         query: {
-          sql: 'SELECT * FROM modules WHERE deleted_at IS NULL'
+          sql: `SELECT * FROM ${$.bifrost.tables.modules} WHERE deleted_at IS NULL`
         }
       }).then(this._setDefaultModule).then((modules) => {
         resolve(modules)
@@ -179,10 +179,10 @@ class Bifrost {
 
   _getProjects () {
     return db.get({
-      app: 'Misty',
+      app: $.app.name,
       key: 'projects-raw',
       query: {
-        sql: 'SELECT * FROM projects WHERE deleted_at IS NULL'
+        sql: `SELECT * FROM ${$.bifrost.tables.projects} WHERE deleted_at IS NULL`
       }
     })
   }
@@ -314,7 +314,7 @@ class Bifrost {
     params.push(this.moduleName)
     params.push(this.tools)
 
-    if ($.passport.whitelist.indexOf(module.route_path) < 0) {
+    if ($.bifrost.whitelist.indexOf(module.route_path) < 0) {
       params.push(accounts.access)
       params.push(this.registerMenu)
     }
@@ -352,6 +352,7 @@ class Bifrost {
 
   routes (app) {
     return this._getModules().then(this._getFlatModules).then(modules => {
+      this._registerServices('heimdallr')
       for (let module of modules) {
         const params = []
         this._registerServices(module.module)
@@ -370,10 +371,10 @@ class Bifrost {
 
   _printRegisteredRoutes (app) {
     console.log()
-    console.log('[misty] registering routes...')
+    console.log('[bifrost] registering routes...')
     app._router.stack.forEach(val => {
       if (val.route) {
-        console.log(`[misty] ${val.route.stack[0].method} ${val.route.path}`)
+        console.log(`[bifrost] ${val.route.stack[0].method} ${val.route.path}`)
       }
     })
     console.log()
@@ -384,6 +385,7 @@ class Bifrost {
   }
 
   moduleNotFound (req, res) {
+    console.log(res.locals.module)
     res.send('Module not found')
   }
 
@@ -393,6 +395,10 @@ class Bifrost {
 
   _registerServices (module) {
     if (_.isUndefined(this.services[module])) {
+      if (module === 'heimdallr') {
+        this.services[module] = accounts
+        return
+      }
       try {
         this.services[module] = require(basepath.services(module))
       } catch (e) {
@@ -427,7 +433,7 @@ class Bifrost {
 
   validateProjectID (req, res, next) {
     const path = req.path
-    if (res.locals.projectId || $.passport.whitelist.indexOf(path) >= 0) {
+    if (res.locals.projectId || $.bifrost.whitelist.indexOf(path) >= 0) {
       return next()
     }
 
@@ -447,7 +453,7 @@ class Bifrost {
   validateAccess (req, res, next) {
     const path = req.path
 
-    if ($.passport.whitelist.indexOf(path) >= 0) {
+    if ($.bifrost.whitelist.indexOf(path) >= 0) {
       return next()
     }
 
