@@ -9,7 +9,7 @@ const accounts = require('@supersoccer/heimdallr')
 const { basepath } = require('@supersoccer/path')
 
 const tpl = {
-  projectNotFound: template.load('errors/projectNotFound'),
+  appNotFound: template.load('errors/appNotFound'),
   pageNotFound: template.load('errors/pageNotFound'),
   forbidden: template.load('errors/forbidden')
 }
@@ -26,7 +26,7 @@ class Bifrost {
     this._getFlatModules = this._getFlatModules.bind(this)
     this._mapModuleNames = this._mapModuleNames.bind(this)
     this.tools = this.tools.bind(this)
-    this.projects = this.projects.bind(this)
+    this.apps = this.apps.bind(this)
     this.moduleName = this.moduleName.bind(this)
     this.registerMenu = this.registerMenu.bind(this)
   }
@@ -172,30 +172,30 @@ class Bifrost {
       path: req.path,
       originalUrl: req.originalUrl,
       params: req.params,
-      projectId: res.locals.projectId
+      appId: res.locals.appId
     }
     next()
   }
 
-  _getProjects () {
+  _getApps () {
     return db.get({
       app: $.app.name,
-      key: 'projects-raw',
+      key: 'apps-raw',
       query: {
-        sql: `SELECT * FROM ${$.bifrost.tables.projects} WHERE deleted_at IS NULL`
+        sql: `SELECT * FROM ${$.bifrost.tables.apps} WHERE deleted_at IS NULL`
       }
     })
   }
 
-  projects (req, res, next) {
-    this._getProjects().then(projects => {
-      res.locals.projects = projects
+  apps (req, res, next) {
+    this._getApps().then(apps => {
+      res.locals.apps = apps
 
       if (!_.isUndefined(req.query)) {
-        if (!_.isUndefined(req.query.project_id)) {
-          const projectId = req.query.project_id.replace(/[^0-9a-z_-]*/i, '')
-          if (!_.isUndefined(_.find(projects, { identifier: projectId }))) {
-            res.locals.projectId = projectId
+        if (!_.isUndefined(req.query.app_id)) {
+          const appId = req.query.app_id.replace(/[^0-9a-z_-]*/i, '')
+          if (!_.isUndefined(_.find(apps, { identifier: appId }))) {
+            res.locals.appId = appId
           }
         }
       }
@@ -309,7 +309,7 @@ class Bifrost {
   _registerDefaultMiddlewares (params, module) {
     params.push(this._favicon)
     params.push(this._query)
-    params.push(this.projects)
+    params.push(this.apps)
     params.push(accounts.passport)
     params.push(this.moduleName)
     params.push(this.tools)
@@ -320,7 +320,7 @@ class Bifrost {
     }
 
     params.push(this.validateModule)
-    params.push(this.validateProjectID)
+    params.push(this.validateAppID)
     params.push(this.validateAccess)
     params.push(mystique.render)
   }
@@ -431,14 +431,14 @@ class Bifrost {
     next()
   }
 
-  validateProjectID (req, res, next) {
+  validateAppID (req, res, next) {
     const path = req.path
-    if (res.locals.projectId || $.bifrost.whitelist.indexOf(path) >= 0) {
+    if (res.locals.appId || $.bifrost.whitelist.indexOf(path) >= 0) {
       return next()
     }
 
-    res.locals.error = 'ERR_PROJECT_NOT_FOUND'
-    res.marko(tpl.projectNotFound)
+    res.locals.error = 'ERR_APP_NOT_FOUND'
+    res.marko(tpl.appNotFound)
   }
 
   validateModule (req, res, next) {
