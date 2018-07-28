@@ -1,8 +1,8 @@
 {
   "plugins": ["plugins/markdown"],
   "source": {
-    "include": [ "index.js" ],
-    "exclude": [],
+    "include": [ "./" ],
+    "exclude": [ "node_modules", "docs" ],
     "includePattern": ".+\\.js(doc|x)?$",
     "excludePattern": "(^|\\/|\\\\)_"
   },
@@ -11,5 +11,10 @@
     "destination": "./docs/",
     "recurse": true,
     "template": "node_modules/docdash"
+  },
+  "templates": {
+    "default": {
+      "outputSourceFiles": false
+    }
   }
 }
