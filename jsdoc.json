@@ -1,0 +1,15 @@
+{
+  "plugins": ["plugins/markdown"],
+  "source": {
+    "include": [ "index.js" ],
+    "exclude": [],
+    "includePattern": ".+\\.js(doc|x)?$",
+    "excludePattern": "(^|\\/|\\\\)_"
+  },
+  "opts": {
+    "encoding": "utf8",
+    "destination": "./docs/",
+    "recurse": true,
+    "template": "node_modules/docdash"
+  }
+}

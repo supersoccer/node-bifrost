@@ -6,6 +6,9 @@
   "repository": "https://github.com/supersoccer/node-bifrost",
   "author": "hkyo89 <hkyo89@yahoo.co.jp>",
   "license": "MIT",
+  "scripts": {
+    "doc": "jsdoc -c jsdoc.json"
+  },
   "dependencies": {
     "@supersoccer/dwarfs": "^1.0.0",
     "@supersoccer/heimdallr": "^1.0.0",
@@ -15,5 +18,9 @@
     "@supersoccer/yggdrasil": "^1.0.0",
     "config": "^1.30.0",
     "lodash": "^4.17.10"
+  },
+  "devDependencies": {
+    "docdash": "^0.4.0",
+    "jsdoc": "^3.5.5"
   }
 }
