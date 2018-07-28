@@ -20,7 +20,7 @@
     "lodash": "^4.17.10"
   },
   "devDependencies": {
-    "docdash": "^0.4.0",
-    "jsdoc": "^3.5.5"
+    "jsdoc": "^3.5.5",
+    "minami": "^1.2.3"
   }
 }
