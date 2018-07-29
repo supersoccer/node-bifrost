@@ -1,11 +1,36 @@
+
 const $ = require('config')
+/**
+ * @requires module:lodash
+ */
 const _ = require('lodash')
+/**
+ * @requires module:@supersoccer/mystique
+ */
 const mystique = require('@supersoccer/mystique')
+/**
+ * @requires module:@supersoccer/tools
+ */
 const t = require('@supersoccer/tools')
+/**
+ * @requires module:@supersoccer/dwarfs
+ */
 const db = require('@supersoccer/dwarfs')
+/**
+ * @requires module:@supersoccer/yggdrasil
+ */
 const Cache = require('@supersoccer/yggdrasil')
+/**
+ * @requires module:@supersoccer/template
+ */
 const template = require('@supersoccer/template')
+/**
+ * @requires module:@supersoccer/heimdallr
+ */
 const accounts = require('@supersoccer/heimdallr')
+/**
+ * @requires module:@supersoccer/path.Path
+ */
 const { basepath } = require('@supersoccer/path')
 
 const tpl = {
@@ -14,10 +39,17 @@ const tpl = {
   forbidden: template.load('errors/forbidden')
 }
 
-/** This is bifrost class */
+/** Bifrost is a class that automates routing */
 class Bifrost {
   constructor () {
+    /**
+     * @constant {number}
+     */
     this.MENU = 1
+
+    /**
+     * @constant {number}
+     */
     this.ROUTES = 2
 
     this.cache = new Cache($.app.name)
@@ -31,6 +63,11 @@ class Bifrost {
     this.registerMenu = this.registerMenu.bind(this)
   }
 
+  /**
+   * Get all modules from database
+   * @async
+   * @return {promise}
+   */
   _getModules () {
     // TODO: make this dynamic
     return new Promise((resolve, reject) => {
@@ -48,6 +85,12 @@ class Bifrost {
     })
   }
 
+  /**
+   * Set default module
+   * @async
+   * @param {object} modules 
+   * @return {promise} modules with the default module
+   */
   _setDefaultModule (modules) {
     for (let module of modules) {
       if (module.default) {
@@ -62,6 +105,12 @@ class Bifrost {
     return Promise.resolve(modules)
   }
 
+  /**
+   * List all parents
+   * @param {object} obj 
+   * @param {*} parents 
+   * @return {array} list of parents
+   */
   _setParents (obj, parents) {
     if (_.isUndefined(parents)) {
       parents = []
@@ -422,6 +471,12 @@ class Bifrost {
     }
   }
 
+  /**
+   * Get service defined in route, return module not found when service is not found
+   * @param {string} module - request object
+   * @param {string} method - response object
+   * @return {function} service middleware function
+   */
   _service (module, method) {
     if (!_.isUndefined(this.services[module])) {
       if (!_.isUndefined(this.services[module][method])) {
@@ -432,6 +487,12 @@ class Bifrost {
     return this.moduleNotFound
   }
 
+  /**
+   * Block favicon request by immediately returning HTTP 200 status code
+   * @param {object} req - request object
+   * @param {object} res - response object
+   * @param {function} next - middleware next function
+   */
   _favicon (req, res, next) {
     if (req.path === '/favicon.ico') {
       return res.sendStatus(200)
@@ -439,6 +500,12 @@ class Bifrost {
     next()
   }
 
+  /**
+   * Store `req.query` to `res.locals.query`
+   * @param {object} req - request object
+   * @param {object} res - response object
+   * @param {function} next - middleware next function
+   */
   _query (req, res, next) {
     if (req.query) {
       res.locals.query = req.query
@@ -446,6 +513,12 @@ class Bifrost {
     next()
   }
 
+  /**
+   * Validate app ID
+   * @param {object} req - request object
+   * @param {object} res - response object
+   * @param {function} next - middleware next function
+   */
   validateAppID (req, res, next) {
     const path = req.path
     if (res.locals.appId || $.bifrost.whitelist.indexOf(path) >= 0) {
@@ -456,6 +529,12 @@ class Bifrost {
     res.marko(tpl.appNotFound)
   }
 
+  /**
+   * Validate module exsistance
+   * @param {object} req - request object
+   * @param {object} res - response object
+   * @param {function} next - middleware next function
+   */
   validateModule (req, res, next) {
     if (res.locals.module) {
       return next()
@@ -465,6 +544,12 @@ class Bifrost {
     res.marko(tpl.pageNotFound)
   }
 
+  /**
+   * Validate whether request has access to the module
+   * @param {object} req - request object
+   * @param {object} res - response object
+   * @param {function} next - middleware next function
+   */
   validateAccess (req, res, next) {
     const path = req.path
 
