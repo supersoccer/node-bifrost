@@ -1,6 +1,6 @@
 {
   "name": "@supersoccer/bifrost",
-  "version": "1.0.2",
+  "version": "1.1.4",
   "description": "Router module",
   "main": "index.js",
   "repository": "https://github.com/supersoccer/node-bifrost",
@@ -10,17 +10,12 @@
     "doc": "jsdoc -c jsdoc.json"
   },
   "dependencies": {
-    "@supersoccer/dwarfs": "^1.0.0",
-    "@supersoccer/heimdallr": "^1.0.0",
-    "@supersoccer/mystique": "^1.0.0",
-    "@supersoccer/template": "^1.0.0",
-    "@supersoccer/tools": "^1.0.0",
-    "@supersoccer/yggdrasil": "^1.0.0",
+    "@supersoccer/misty": "*",
     "config": "^1.30.0",
     "lodash": "^4.17.10"
   },
   "devDependencies": {
-    "jsdoc": "^3.5.5",
-    "minami": "^1.2.3"
+    "@supersoccer/minako": "*",
+    "jsdoc": "^3.5.5"
   }
 }
