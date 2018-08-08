@@ -1,19 +1,7 @@
-const Misty = require('@supersoccer/misty')
-const $ = Misty.Config
-const mystique = Misty.Mystique
-const t = Misty.Tools
-const db = Misty.Dwarfs
-const Cache = Misty.Yggdrasil
-const template = Misty.Template
-const accounts = Misty.Heimdallr
-const { basepath } = Misty.Path
-const _ = require('lodash')
-
-const tpl = {
-  appNotFound: template.load('errors/appNotFound'),
-  pageNotFound: template.load('errors/pageNotFound'),
-  forbidden: template.load('errors/forbidden')
-}
+const { Config, Mystique, Utils, Dwarfs, Yggdrasil, Heimdallr } = require('@supersoccer/misty')
+const { Lodash, Moment, Url, Mixin, Path, Env } = Utils
+const _ = Lodash
+const mystique = new Mystique()
 
 class Bifrost {
   constructor () {
@@ -24,24 +12,24 @@ class Bifrost {
     this.getTreeModules = this.getTreeModules.bind(this)
     this._getFlatModules = this._getFlatModules.bind(this)
     this._mapModuleNames = this._mapModuleNames.bind(this)
-    this.tools = this.tools.bind(this)
+    this.utils = this.utils.bind(this)
     this.apps = this.apps.bind(this)
     this.moduleName = this.moduleName.bind(this)
     this.registerMenu = this.registerMenu.bind(this)
   }
 
   cache () {
-    this.cache = new Cache($.app.name)
+    this.cache = new Yggdrasil(Config.App.name)
   }
 
   _getModules () {
     // TODO: make this dynamic
     return new Promise((resolve, reject) => {
-      db.get({
-        app: $.app.name,
+      Dwarfs.get({
+        app: Config.App.name,
         key: 'modules-raw',
         query: {
-          sql: `SELECT * FROM ${$.bifrost.tables.modules} WHERE deleted_at IS NULL`
+          sql: `SELECT * FROM ${Config.Bifrost.tables.modules} WHERE deleted_at IS NULL`
         }
       }).then(this._setDefaultModule).then((modules) => {
         resolve(modules)
@@ -168,24 +156,20 @@ class Bifrost {
     })
   }
 
-  tools (req, res, next) {
-    res.locals.t = t
-    res.locals.t.runtime = {
-      query: req.query,
-      path: req.path,
-      originalUrl: req.originalUrl,
-      params: req.params,
-      appId: res.locals.appId
-    }
+  utils (req, res, next) {
+    res.locals.Utils = { Lodash, Moment, Path, Mixin }
+    res.locals.Utils.Env = new Env(req, res)
+    res.locals.Utils.Url = new Url(res.locals.Utils.Env)
+    res.locals.Utils.Mystique = Mystique
     next()
   }
 
   _getApps () {
-    return db.get({
-      app: $.app.name,
+    return Dwarfs.get({
+      app: Config.App.name,
       key: 'apps-raw',
       query: {
-        sql: `SELECT * FROM ${$.bifrost.tables.apps} WHERE deleted_at IS NULL`
+        sql: `SELECT * FROM ${Config.Bifrost.tables.apps} WHERE deleted_at IS NULL`
       }
     })
   }
@@ -195,8 +179,8 @@ class Bifrost {
       res.locals.apps = apps
 
       if (!_.isUndefined(req.query)) {
-        if (!_.isUndefined(req.query.app_id)) {
-          const appId = req.query.app_id.replace(/[^0-9a-z_-]*/i, '')
+        if (!_.isUndefined(req.query.app)) {
+          const appId = req.query.app.replace(/[^0-9a-z_-]*/i, '')
           if (!_.isUndefined(_.find(apps, { identifier: appId }))) {
             res.locals.appId = appId
           }
@@ -313,12 +297,12 @@ class Bifrost {
     params.push(this._favicon)
     params.push(this._query)
     params.push(this.apps)
-    params.push(accounts.passport)
+    params.push(Heimdallr.passport)
     params.push(this.moduleName)
-    params.push(this.tools)
+    params.push(this.utils)
 
-    if ($.bifrost.whitelist.indexOf(module.route_path) < 0) {
-      params.push(accounts.access)
+    if (Config.Bifrost.whitelist.indexOf(module.route_path) < 0) {
+      params.push(Heimdallr.access)
       params.push(this.registerMenu)
     }
 
@@ -401,11 +385,11 @@ class Bifrost {
   _registerServices (module) {
     if (_.isUndefined(this.services[module])) {
       if (module === 'heimdallr') {
-        this.services[module] = accounts
+        this.services[module] = Heimdallr
         return
       }
       try {
-        this.services[module] = require(basepath.services(module))
+        this.services[module] = require(Utils.Path.basepath.services(module))
       } catch (e) {
         throw new Error(`Cannot import module ${module} with ${e}`)
       }
@@ -438,12 +422,12 @@ class Bifrost {
 
   validateAppID (req, res, next) {
     const path = req.path
-    if (res.locals.appId || $.bifrost.whitelist.indexOf(path) >= 0) {
+    if (res.locals.appId || Config.Bifrost.whitelist.indexOf(path) >= 0) {
       return next()
     }
 
     res.locals.error = 'ERR_APP_NOT_FOUND'
-    res.marko(tpl.appNotFound)
+    res.marko(Mystique.load('errors/appNotFound'))
   }
 
   validateModule (req, res, next) {
@@ -452,13 +436,13 @@ class Bifrost {
     }
 
     res.locals.error = 'ERR_PAGE_NOT_FOUND'
-    res.marko(tpl.pageNotFound)
+    res.marko(Mystique.load('errors/pageNotFound'))
   }
 
   validateAccess (req, res, next) {
     const path = req.path
 
-    if ($.bifrost.whitelist.indexOf(path) >= 0) {
+    if (Config.Bifrost.whitelist.indexOf(path) >= 0) {
       return next()
     }
 
@@ -469,7 +453,7 @@ class Bifrost {
     }
 
     res.locals.error = 'ERR_ACCESS_FORBIDDEN'
-    res.marko(tpl.forbidden)
+    res.marko(Mystique.load('errors/forbidden'))
   }
 }
 
