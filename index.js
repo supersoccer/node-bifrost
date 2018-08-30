@@ -1,4 +1,5 @@
-const { Config, Mystique, Utils, Dwarfs, Yggdrasil, Heimdallr } = require('@supersoccer/misty')
+// const MistyLoader = require('@supersoccer/misty-loader')
+const { Log, Config, Mystique, Utils, Dwarfs, Yggdrasil, Heimdallr } = require('@supersoccer/misty-loader')
 const { Lodash, Moment, Url, Mixin, Path, Env } = Utils
 const _ = Lodash
 const mystique = new Mystique()
@@ -186,6 +187,10 @@ class Bifrost {
           }
         }
       }
+
+      Log.debug('HOST', req.host)
+      Log.debug('HEADER', req.headers['x-url'])
+
       next()
     })
   }
@@ -297,9 +302,9 @@ class Bifrost {
     params.push(this._favicon)
     params.push(this._query)
     params.push(this.apps)
+    params.push(this.utils)
     params.push(Heimdallr.passport)
     params.push(this.moduleName)
-    params.push(this.utils)
 
     if (Config.Bifrost.whitelist.indexOf(module.route_path) < 0) {
       params.push(Heimdallr.access)
@@ -359,11 +364,11 @@ class Bifrost {
   }
 
   _printRegisteredRoutes (app) {
-    console.log()
-    console.log('[bifrost] registering routes...')
+    Log.print()
+    Log.Bifrost('registering routes...')
     app._router.stack.forEach(val => {
       if (val.route) {
-        console.log(`[bifrost] ${val.route.stack[0].method} ${val.route.path}`)
+        Log.Bifrost(`${val.route.stack[0].method} ${val.route.path}`)
       }
     })
     console.log()
