@@ -3,7 +3,7 @@
   "version": "1.5.0",
   "description": "Router module",
   "main": "index.js",
-  "repository": "https://github.com/supersoccer/node-bifrost",
+  "repository": "https://github.com/supersoccer/node-bifrost#v1.5.0",
   "author": "hkyo89 <hkyo89@yahoo.co.jp>",
   "license": "MIT",
   "scripts": {
