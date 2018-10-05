@@ -1,9 +1,9 @@
 {
   "name": "@supersoccer/bifrost",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Router module",
   "main": "index.js",
-  "repository": "https://github.com/supersoccer/node-bifrost",
+  "repository": "git://github.com/supersoccer/node-bifrost.git#v1.5.0",
   "author": "hkyo89 <hkyo89@yahoo.co.jp>",
   "license": "MIT",
   "scripts": {
