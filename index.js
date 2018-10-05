@@ -4,10 +4,77 @@ const { Lodash, Moment, Url, Mixin, Path, Env } = Utils
 const _ = Lodash
 const mystique = new Mystique()
 
+const methodSource = [
+  {
+    name: 'Manage',
+    method: 'index',
+    route_method: 'GET',
+    route_path: '/',
+    visible: 1,
+    permit: 'read',
+    permission: 1
+  },
+  {
+    name: 'Create',
+    method: 'create',
+    route_method: 'GET',
+    route_path: '/create',
+    visible: 1,
+    permit: 'write',
+    permission: 3
+  },      
+  {
+    name: 'Store',
+    method: 'store',
+    route_method: 'POST',
+    route_path: '/create',
+    visible: 0,
+    permit: 'write',
+    permission: 3
+  },
+  {
+    name: 'Edit',
+    method: 'edit',
+    route_method: 'GET',
+    route_path: '/:primaryId/edit',
+    visible: 0,
+    permit: 'update',
+    permission: 5
+  },
+  {
+    name: 'Edit',
+    method: 'update',
+    route_method: 'POST',
+    route_path: '/:primaryId/edit',
+    visible: 0,
+    permit: 'update',
+    permission: 5
+  },      
+  {
+    name: 'Show',
+    method: 'show',
+    route_method: 'GET',
+    route_path: '/:primaryId/show',
+    visible: 0,
+    permit: 'read',
+    permission: 1
+  },
+  {
+    name: 'Destroy',
+    method: 'destroy',
+    route_method: 'POST',
+    route_path: '/:primaryId/delete',
+    visible: 0,
+    permit: 'delete',
+    permission: 15
+  }
+]
+
 class Bifrost {
   constructor () {
     this.MENU = 1
     this.ROUTES = 2
+    this.collectionRoutes = []
 
     this.services = {}
     this.getTreeModules = this.getTreeModules.bind(this)
@@ -33,7 +100,41 @@ class Bifrost {
           sql: `SELECT * FROM ${Config.Bifrost.tables.modules} WHERE deleted_at IS NULL`
         }
       }).then(this._setDefaultModule).then((modules) => {
-        resolve(modules)
+        let modulesRaw = modules
+        let startId = 10000
+        let newRoutes = []
+        let test = []
+        modules.map((module, index) => {
+          modulesRaw[index].permission = 1
+
+          if (module.method === 'resource') {
+            modulesRaw[index].method = 'index'
+
+            methodSource.map((dataSource, index) => {
+              let newModule = Object.assign({}, dataSource)
+              newModule.id = startId++
+              newModule.parent_id = module.id
+              newModule.type = 2
+              newModule.description = ''
+              newModule.icon = null
+              newModule.middlewares = null
+              newModule.module = module.module
+              newModule.auth = 1
+              newModule.default = 0
+              newModule.menu_order = 0
+              newModule.route_order = 0
+              newModule.created_at = '2018-06-05T13:10:15.000Z'
+              newModule.updated_at = null
+              newModule.deleted_at = null
+              newModule.name = newModule.name +' '+ module.name
+
+              newRoutes.push(newModule)
+            })
+          }
+        })
+
+        Array.prototype.push.apply(modulesRaw, newRoutes)
+        resolve(modulesRaw)
       }).catch((err) => {
         resolve(err)
       })
@@ -93,8 +194,15 @@ class Bifrost {
   }
 
   _concatInheritedRoutePath (item, route) {
-    item.route_path = `${route}/${item.route_path.replace(/^\//, '')}`
-    item.route_path = item.route_path === '/*' ? '*' : item.route_path
+    if (this.collectionRoutes.indexOf(item.route_path) <= 1) {
+      if(item.route_path === '/' && item.default === 0) {
+        item.route_path = `${route}`
+      }else{      
+        item.route_path = `${route}/${item.route_path.replace(/^\//, '')}`
+      }
+      item.route_path = item.route_path === '/*' ? '*' : item.route_path  
+    }
+    this.collectionRoutes.push(item.route_path)
   }
 
   _getTreeCondition (type, item, parentId) {
@@ -160,8 +268,9 @@ class Bifrost {
   utils (req, res, next) {
     res.locals.Utils = { Lodash, Moment, Path, Mixin }
     res.locals.Utils.Env = new Env(req, res)
-    res.locals.Utils.Url = new Url(res.locals.Utils.Env)
+    res.locals.Utils.Url = new Url(res.locals)
     res.locals.Utils.Mystique = Mystique
+    res.locals.Utils.Heimdallr = Heimdallr.utils(res)
     next()
   }
 
@@ -179,20 +288,54 @@ class Bifrost {
     this._getApps().then(apps => {
       res.locals.apps = apps
 
-      if (!_.isUndefined(req.query)) {
-        if (!_.isUndefined(req.query.app)) {
-          const appId = req.query.app.replace(/[^0-9a-z_-]*/i, '')
-          if (!_.isUndefined(_.find(apps, { identifier: appId }))) {
-            res.locals.appId = appId
-          }
-        }
-      }
+      const app = this.appIdByDomain(req.headers, apps) || this.appIdByQuery(req.query, apps)
 
-      Log.debug('HOST', req.host)
-      Log.debug('HEADER', req.headers['x-url'])
+      if (app) {
+        res.locals.app = _.find(apps, { id: app.appId })
+        res.locals.appId = app.appId
+        res.locals.appLock = app.appLock
+      }
 
       next()
     })
+  }
+
+  appIdByDomain (headers, apps) {
+    let appDomain = Utils.Url.cleanAppDomainUrl(headers['x-url'])
+
+    if (_.isUndefined(appDomain)) {
+      return
+    }
+
+    const app = _.find(apps, (o) => {
+      const host = Utils.Url.cleanAppDomainUrl(o.host)
+
+      if (_.isUndefined(host) || host === '') {
+        return false
+      }
+
+      return appDomain.indexOf(host) === 0
+    })
+
+    if (app) {
+      return { appId: app.id, appLock: true }
+    }
+  }
+
+  appIdByQuery (query, apps) {
+    if (_.isUndefined(query)) {
+      return
+    }
+
+    if (_.isUndefined(query.app)) {
+      return
+    }
+
+    const appId = query.app.replace(/[^0-9a-z_-]*/i, '')
+
+    if (!_.isUndefined(_.find(apps, { identifier: appId }))) {
+      return { appId: appId, appLock: false }
+    }
   }
 
   moduleName (req, res, next) {
@@ -201,6 +344,7 @@ class Bifrost {
       res.locals.module = modules[key]
       res.locals.path = req.path
       res.locals.method = req.method
+      res.locals.modules = _.values(modules)
       next()
     }).catch(error => {
       res.locals.module = null
@@ -213,17 +357,37 @@ class Bifrost {
     return this._getModules().then(this.getTreeModules)
   }
 
-  _hasAccess (roles, module, superuser) {
-    if (module.visible === -1 || superuser) {
-      return true
+  _hasAccess (roles, module, superuser, access) {
+    const { appId, apps } = access
+    const currentApp = apps.find(x => x.identifier === appId)
+    let haveAccess = false
+
+    if(currentApp) {
+      const modulesIdx = JSON.parse(currentApp.modules)
+      if(modulesIdx.find(x => parseInt(x) === module.id)) {
+        haveAccess = true
+      }
+    }
+
+    if ((module.visible === -1 || superuser)) {
+      if((module.type === 2 && module.parent_id !== 0) || haveAccess) {
+        return true
+      }
     }
 
     const role = _.find(roles, { moduleId: module.id })
+    if(!_.isUndefined(module.permit) && !_.isUndefined(role)) {
+      return role.roles[module.permit]
+    }
 
     if (_.isUndefined(role)) {
       return false
     }
 
+    if(superuser) {
+      return haveAccess
+    }
+    
     return role.roles.read
   }
 
@@ -236,6 +400,11 @@ class Bifrost {
   }
 
   _authorizedMenuItems (menuItems, res, depth) {
+    const access = {
+      appId: res.locals.appId,
+      apps: res.locals.apps
+    }
+
     const roles = res.locals.IAM.roles
     const superuser = res.locals.IAM.superuser
     const moduleId = res.locals.module.id
@@ -243,7 +412,7 @@ class Bifrost {
     depth = depth || 0
 
     for (let item of menuItems) {
-      if (!this._hasAccess(roles, item, superuser)) {
+      if (!this._hasAccess(roles, item, superuser, access)) {
         continue
       }
 
@@ -270,7 +439,7 @@ class Bifrost {
   }
 
   registerMenu (req, res, next) {
-    // const roles = res.locals.IAM.roles
+    const roles = res.locals.IAM.roles
 
     this._menu().then(menuItems => {
       res.locals.menuItems = this._authorizedMenuItems(menuItems, res)
@@ -301,6 +470,7 @@ class Bifrost {
   _registerDefaultMiddlewares (params, module) {
     params.push(this._favicon)
     params.push(this._query)
+    params.push(mystique.render)
     params.push(this.apps)
     params.push(this.utils)
     params.push(Heimdallr.passport)
@@ -314,7 +484,6 @@ class Bifrost {
     params.push(this.validateModule)
     params.push(this.validateAppID)
     params.push(this.validateAccess)
-    params.push(mystique.render)
   }
 
   _registerRoutePath (params, module) {
@@ -371,44 +540,44 @@ class Bifrost {
         Log.Bifrost(`${val.route.stack[0].method} ${val.route.path}`)
       }
     })
-    console.log()
   }
 
   _registerRoute (app, method, params) {
     app[method.toLowerCase()](...params)
   }
 
-  moduleNotFound (req, res) {
-    console.log(res.locals.module)
-    res.send('Module not found')
+  serviceNotFound (req, res) {
+    res.send('Service not found')
   }
 
   pageNotFound (req, res) {
     res.sendStatus(404)
   }
 
-  _registerServices (module) {
-    if (_.isUndefined(this.services[module])) {
-      if (module === 'heimdallr') {
-        this.services[module] = Heimdallr
+  _registerServices (service) {
+    if (_.isUndefined(this.services[service])) {
+      Log.Bifrost(`register ${service} service`)
+      if (service === 'heimdallr') {
+        this.services[service] = Heimdallr
         return
       }
       try {
-        this.services[module] = require(Utils.Path.basepath.services(module))
+        const servicePath = Utils.Path.basepath.services(service)
+        this.services[service] = require(servicePath)
       } catch (e) {
-        throw new Error(`Cannot import module ${module} with ${e}`)
+        throw new Error(`Cannot import service module ${service} with ${e}`)
       }
     }
   }
 
-  _service (module, method) {
-    if (!_.isUndefined(this.services[module])) {
-      if (!_.isUndefined(this.services[module][method])) {
-        return this.services[module][method]
+  _service (service, method) {
+    if (!_.isUndefined(this.services[service])) {
+      if (!_.isUndefined(this.services[service][method])) {
+        return this.services[service][method]
       }
     }
 
-    return this.moduleNotFound
+    return this.serviceNotFound
   }
 
   _favicon (req, res, next) {
