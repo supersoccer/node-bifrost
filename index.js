@@ -194,16 +194,9 @@ class Bifrost {
   }
 
   _concatInheritedRoutePath (item, route) {
-    if (this.collectionRoutes.indexOf(item.route_path) <= 1) {
-      if(item.route_path === '/' && item.default === 0) {
-        item.route_path = `${route}`
-      }else{      
-        item.route_path = `${route}/${item.route_path.replace(/^\//, '')}`
-      }
-      item.route_path = item.route_path === '/*' ? '*' : item.route_path  
-    }
-    this.collectionRoutes.push(item.route_path)
-  }
+    item.route_path = `${route}/${item.route_path.replace(/^\//, '')}`
+    item.route_path = item.route_path === '/*' ? '*' : item.route_path
+  }  
 
   _getTreeCondition (type, item, parentId) {
     switch (type) {
@@ -473,7 +466,9 @@ class Bifrost {
     params.push(mystique.render)
     params.push(this.apps)
     params.push(this.utils)
-    params.push(Heimdallr.passport)
+    if (Config.Bifrost.whitelist.indexOf(module.route_path) < 0) {
+      params.push(Heimdallr.passport)
+    }
     params.push(this.moduleName)
 
     if (Config.Bifrost.whitelist.indexOf(module.route_path) < 0) {
@@ -595,7 +590,11 @@ class Bifrost {
   }
 
   validateAppID (req, res, next) {
-    const path = req.path
+    let path = req.path
+    if (typeof res.locals.module.route_path !== 'undefined') {
+      path = res.locals.module.route_path
+    }
+
     if (res.locals.appId || Config.Bifrost.whitelist.indexOf(path) >= 0) {
       return next()
     }
@@ -614,7 +613,10 @@ class Bifrost {
   }
 
   validateAccess (req, res, next) {
-    const path = req.path
+    let path = req.path
+    if (typeof res.locals.module.route_path !== 'undefined') {
+      path = res.locals.module.route_path
+    }
 
     if (Config.Bifrost.whitelist.indexOf(path) >= 0) {
       return next()
