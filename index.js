@@ -363,7 +363,7 @@ class Bifrost {
     }
 
     if ((module.visible === -1 || superuser)) {
-      if((module.type === 2 && module.parent_id !== 0) || haveAccess) {
+      if(haveAccess) {
         return true
       }
     }
@@ -382,7 +382,7 @@ class Bifrost {
     }
     
     return role.roles.read
-  }
+  }  
 
   _pushValidItem (items, item, hasChilds, depth) {
     if ((depth === 0 && !hasChilds) || (depth === 1 && hasChilds && item.childs.length === 0)) {
