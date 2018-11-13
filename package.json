@@ -1,6 +1,6 @@
 {
   "name": "@supersoccer/bifrost",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "Router module",
   "main": "index.js",
   "repository": "git://github.com/supersoccer/node-bifrost.git#v1.5.3",
