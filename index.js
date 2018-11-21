@@ -9,7 +9,7 @@ const methodSource = [
     name: 'Manage',
     method: 'index',
     route_method: 'GET',
-    route_path: '/',
+    route_path: '/list',
     visible: 1,
     permit: 'read',
     permission: 1
@@ -126,10 +126,27 @@ class Bifrost {
               newModule.created_at = '2018-06-05T13:10:15.000Z'
               newModule.updated_at = null
               newModule.deleted_at = null
-              newModule.name = newModule.name +' '+ module.name
 
-              newRoutes.push(newModule)
+              newModule.slug = dataSource.method + '-' + module.slug
+              
+              if (index === 0 && !_.isNull(module.index_label)) {
+                newModule.name = module.index_label
+              } else if (index === 1 && !_.isNull(module.create_label)) {
+                newModule.name = module.create_label
+              } else if (index === 2 && !_.isNull(module.edit_label)) {
+                newModule.name = module.edit_label
+              } else {
+                newModule.name = newModule.name +' '+ module.name
+              }
+
+              if (parseInt(module.resource_limit) >= index) {
+                newRoutes.push(newModule)
+              }
             })
+
+            if (module.nested_id) {
+              modulesRaw[index].route_path = '/:nestedId' + modulesRaw[index].route_path
+            }
           }
         })
 
@@ -194,16 +211,9 @@ class Bifrost {
   }
 
   _concatInheritedRoutePath (item, route) {
-    if (this.collectionRoutes.indexOf(item.route_path) <= 1) {
-      if(item.route_path === '/' && item.default === 0) {
-        item.route_path = `${route}`
-      }else{      
-        item.route_path = `${route}/${item.route_path.replace(/^\//, '')}`
-      }
-      item.route_path = item.route_path === '/*' ? '*' : item.route_path  
-    }
-    this.collectionRoutes.push(item.route_path)
-  }
+    item.route_path = `${route}/${item.route_path.replace(/^\//, '')}`
+    item.route_path = item.route_path === '/*' ? '*' : item.route_path
+  }  
 
   _getTreeCondition (type, item, parentId) {
     switch (type) {
@@ -357,20 +367,26 @@ class Bifrost {
     return this._getModules().then(this.getTreeModules)
   }
 
-  _hasAccess (roles, module, superuser, access) {
+  _hasAccess (roles, module, superuser, access, modules) {
     const { appId, apps } = access
     const currentApp = apps.find(x => x.identifier === appId)
     let haveAccess = false
 
     if(currentApp) {
       const modulesIdx = JSON.parse(currentApp.modules)
-      if(modulesIdx.find(x => parseInt(x) === module.id)) {
+      if (modulesIdx.find(x => parseInt(x) === module.id)) {
         haveAccess = true
+      }
+      
+      if (!_.isUndefined(modules)) {
+        if (module.id >= 1000 && modules.find(x => modulesIdx.indexOf(x.parent_id))) {
+          haveAccess = true
+        }  
       }
     }
 
-    if ((module.visible === -1 || superuser)) {
-      if((module.type === 2 && module.parent_id !== 0) || haveAccess) {
+    if (module.visible === -1 || superuser) {
+      if (haveAccess) {
         return true
       }
     }
@@ -389,7 +405,7 @@ class Bifrost {
     }
     
     return role.roles.read
-  }
+  }  
 
   _pushValidItem (items, item, hasChilds, depth) {
     if ((depth === 0 && !hasChilds) || (depth === 1 && hasChilds && item.childs.length === 0)) {
@@ -412,7 +428,7 @@ class Bifrost {
     depth = depth || 0
 
     for (let item of menuItems) {
-      if (!this._hasAccess(roles, item, superuser, access)) {
+      if (!this._hasAccess(roles, item, superuser, access, res.locals.modules)) {
         continue
       }
 
@@ -473,7 +489,9 @@ class Bifrost {
     params.push(mystique.render)
     params.push(this.apps)
     params.push(this.utils)
-    params.push(Heimdallr.passport)
+    if (Config.Bifrost.whitelist.indexOf(module.route_path) < 0) {
+      params.push(Heimdallr.passport)
+    }
     params.push(this.moduleName)
 
     if (Config.Bifrost.whitelist.indexOf(module.route_path) < 0) {
@@ -595,7 +613,11 @@ class Bifrost {
   }
 
   validateAppID (req, res, next) {
-    const path = req.path
+    let path = req.path
+    if (typeof res.locals.module.route_path !== 'undefined') {
+      path = res.locals.module.route_path
+    }
+
     if (res.locals.appId || Config.Bifrost.whitelist.indexOf(path) >= 0) {
       return next()
     }
@@ -614,7 +636,10 @@ class Bifrost {
   }
 
   validateAccess (req, res, next) {
-    const path = req.path
+    let path = req.path
+    if (typeof res.locals.module.route_path !== 'undefined') {
+      path = res.locals.module.route_path
+    }
 
     if (Config.Bifrost.whitelist.indexOf(path) >= 0) {
       return next()
