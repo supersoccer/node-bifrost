@@ -106,6 +106,7 @@ class Bifrost {
         let test = []
         modules.map((module, index) => {
           modulesRaw[index].permission = 1
+          modulesRaw[index].moduleScope = module.scope
 
           if (module.method === 'resource') {
             modulesRaw[index].method = 'index'
@@ -126,6 +127,8 @@ class Bifrost {
               newModule.created_at = '2018-06-05T13:10:15.000Z'
               newModule.updated_at = null
               newModule.deleted_at = null
+
+              newModule.slug = dataSource.method + '-' + module.slug
               
               if (index === 0 && !_.isNull(module.index_label)) {
                 newModule.name = module.index_label
@@ -137,10 +140,30 @@ class Bifrost {
                 newModule.name = newModule.name +' '+ module.name
               }
 
+              if ([0,5].indexOf(index) >= 0) {
+                newModule.moduleScope = module.scope
+              }
+
+              if ([1,2].indexOf(index) >= 0) {
+                newModule.moduleScope = module.create_scope
+              }
+
+              if ([3,5].indexOf(index) >= 0) {
+                newModule.moduleScope = module.edit_scope
+              }
+
+              if ([4,6].indexOf(index) >= 0) {
+                newModule.moduleScope = module.delete_scope
+              }
+
               if (parseInt(module.resource_limit) >= index) {
                 newRoutes.push(newModule)
               }
             })
+
+            if (module.nested_id) {
+              modulesRaw[index].route_path = '/:nestedId' + modulesRaw[index].route_path
+            }
           }
         })
 
