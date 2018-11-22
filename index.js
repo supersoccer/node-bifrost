@@ -106,6 +106,7 @@ class Bifrost {
         let test = []
         modules.map((module, index) => {
           modulesRaw[index].permission = 1
+          modulesRaw[index].moduleScope = module.scope
 
           if (module.method === 'resource') {
             modulesRaw[index].method = 'index'
@@ -137,6 +138,22 @@ class Bifrost {
                 newModule.name = module.edit_label
               } else {
                 newModule.name = newModule.name +' '+ module.name
+              }
+
+              if ([0,5].indexOf(index) >= 0) {
+                newModule.moduleScope = module.scope
+              }
+
+              if ([1,2].indexOf(index) >= 0) {
+                newModule.moduleScope = module.create_scope
+              }
+
+              if ([3,5].indexOf(index) >= 0) {
+                newModule.moduleScope = module.edit_scope
+              }
+
+              if ([4,6].indexOf(index) >= 0) {
+                newModule.moduleScope = module.delete_scope
               }
 
               if (parseInt(module.resource_limit) >= index) {
