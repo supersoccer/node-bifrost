@@ -103,7 +103,6 @@ class Bifrost {
         let modulesRaw = modules
         let startId = 10000
         let newRoutes = []
-        let test = []
         modules.map((module, index) => {
           modulesRaw[index].permission = 1
           modulesRaw[index].moduleScope = module.scope
@@ -297,7 +296,7 @@ class Bifrost {
     res.locals.Utils.Env = new Env(req, res)
     res.locals.Utils.Url = new Url(res.locals)
     res.locals.Utils.Mystique = Mystique
-    res.locals.Utils.Heimdallr = Heimdallr.utils(res)
+    res.locals.Utils.Heimdallr = Heimdallr.utils(req, res)
     next()
   }
 
@@ -321,6 +320,10 @@ class Bifrost {
         res.locals.app = _.find(apps, { id: app.appId })
         res.locals.appId = app.appId
         res.locals.appLock = app.appLock
+
+        if (_.isNumber(res.locals.appId) && !_.isUndefined(res.locals.app)) {
+          res.locals.appId = (res.locals.app).identifier
+        }
       }
 
       next()
