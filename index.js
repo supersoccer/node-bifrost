@@ -114,6 +114,7 @@ class Bifrost {
               let newModule = Object.assign({}, dataSource)
               newModule.id = startId++
               newModule.parent_id = module.id
+              newModule.api_based = module.api_based
               newModule.type = 2
               newModule.description = ''
               newModule.icon = null
