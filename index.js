@@ -322,6 +322,10 @@ class Bifrost {
         res.locals.appId = app.appId
         res.locals.appLock = app.appLock
 
+        if (!_.isUndefined(req.headers['x-url'])) {
+          res.locals.xURL = req.headers['x-url']
+        }
+
         if (_.isNumber(res.locals.appId) && !_.isUndefined(res.locals.app)) {
           res.locals.appId = (res.locals.app).identifier
         }
@@ -339,13 +343,8 @@ class Bifrost {
     }
 
     const app = _.find(apps, (o) => {
-      const host = Utils.Url.cleanAppDomainUrl(o.host)
-
-      if (_.isUndefined(host) || host === '') {
-        return false
-      }
-
-      return appDomain.indexOf(host) === 0
+      const hosts = (o.host).split(' ')
+      return hosts.indexOf(appDomain) >= 0
     })
 
     if (app) {
